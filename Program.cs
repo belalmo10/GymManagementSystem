@@ -16,8 +16,10 @@ namespace GymManagementSystem
             // Add services to the container.
             builder.Services.AddControllersWithViews();
             //builder.Services.AddScoped<IPlanRepository, PlanRepository>();
-            builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-            builder.Services.AddScoped<IMemberService, MemberService>();
+            builder.Services.AddScoped(typeof(IGenericRepository<>) , typeof(GenericRepository<>));
+            builder.Services.AddScoped<IMemberService , MemberService>();
+            builder.Services.AddScoped<IPlanService , PlanService>();
+            builder.Services.AddScoped<ITrainerService , TrainerService>();
             builder.Services.AddDbContext<GymDbContext>(options =>
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
@@ -26,7 +28,7 @@ namespace GymManagementSystem
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
+            if ( !app.Environment.IsDevelopment() )
             {
                 app.UseExceptionHandler("/Home/Error");
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
@@ -41,7 +43,7 @@ namespace GymManagementSystem
             app.UseAuthorization();
 
             app.MapControllerRoute(
-                name: "default",
+                name: "default" ,
                 pattern: "{controller=Home}/{action=Index}/{id?}");
 
             app.Run();

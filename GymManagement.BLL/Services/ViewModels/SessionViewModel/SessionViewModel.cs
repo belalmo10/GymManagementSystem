@@ -1,0 +1,34 @@
+﻿using GymManagement.DAL.Data.Models.Enums;
+
+namespace GymManagement.BLL.Services.ViewModels.SessionViewModel
+{
+    public class SessionViewModel
+    {
+        public int Id { get; set; }
+        public int Capacity { get; set; }
+        public Speciality Speciality { get; set; }
+        public string Description { get; set; } = default!;
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public string TrainerName { get; set; } = default!;
+        public int AvailableSlots { get; set; }
+        public string CategoryName { get; set; } = default!;
+
+        public string DateDisplay => $"{StartDate:MMM dd , yyyy}";
+        public string TimeRangeDisplay => $"{StartDate:hh:mm tt} - {EndDate:hh:mm tt}";
+        public TimeSpan Duration => EndDate - StartDate;
+        public string Status
+        {
+            get
+            {
+                if ( StartDate > DateTime.Now )
+                    return $"UpComing";
+                else if ( StartDate <= DateTime.Now && EndDate >= DateTime.Now )
+                    return $"OnGoing";
+                else
+                    return $"Completed";
+            }
+        }
+
+    }
+}

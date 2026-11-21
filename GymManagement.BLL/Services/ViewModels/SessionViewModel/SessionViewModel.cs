@@ -22,9 +22,9 @@ namespace GymManagement.BLL.Services.ViewModels.SessionViewModel
             get
             {
                 if ( StartDate > DateTime.Now )
-                    return $"UpComing";
+                    return $"Upcoming";
                 else if ( StartDate <= DateTime.Now && EndDate >= DateTime.Now )
-                    return $"OnGoing";
+                    return $"Ongoing";
                 else
                     return $"Completed";
             }

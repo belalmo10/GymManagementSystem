@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using GymManagement.BLL.Services.ViewModels.MemberViewModel;
+using GymManagement.BLL.Services.ViewModels.PlanViewModel;
 using GymManagement.BLL.Services.ViewModels.SessionViewModel;
 using GymManagement.DAL.Data.Models;
 
@@ -11,7 +12,7 @@ namespace GymManagement.BLL
         {
             MapMember();
             MapSession();
-
+            MapPlan();
         }
 
 
@@ -59,6 +60,12 @@ namespace GymManagement.BLL
                 .ForMember(des => des.CategoryName , opt => opt.MapFrom(src => src.Category.CategoryName));
 
             CreateMap<Session , UpdateSessionViewModel>().ReverseMap();
+
+        }
+        private void MapPlan()
+        {
+            CreateMap<Plan , PlanViewModel>().ReverseMap();
+            CreateMap<Plan , UpdatePlanViewModel>().ReverseMap();
 
         }
     }

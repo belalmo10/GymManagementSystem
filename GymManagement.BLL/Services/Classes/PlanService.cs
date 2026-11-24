@@ -1,4 +1,6 @@
-﻿using GymManagement.BLL.Services.Interfaces;
+﻿using AutoMapper;
+using GymManagement.BLL.Common;
+using GymManagement.BLL.Services.Interfaces;
 using GymManagement.BLL.Services.ViewModels.PlanViewModel;
 using GymManagement.DAL.Data.Models;
 using GymManagement.DAL.Repositorities.Interfaces;
@@ -8,93 +10,75 @@ namespace GymManagement.BLL.Services.Classes
     public class PlanService : IPlanService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public PlanService(IUnitOfWork unitOfWork)
+        public PlanService(IUnitOfWork unitOfWork , IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         public async Task<IEnumerable<PlanViewModel>> GetAllPlansAsync(CancellationToken ct)
         {
             var plans = await _unitOfWork.GetRepository<Plan>().GetAllAsync(ct: ct);
-            return plans.Select(p => new PlanViewModel
-            {
-                Id = p.Id ,
-                Name = p.Name ,
-                Description = p.Description ,
-                DurationDays = p.DurationDays ,
-                Price = p.Price ,
-                IsActive = p.IsActive
-            });
+
+            var viewPlans = _mapper.Map<IEnumerable<Plan> , IEnumerable<PlanViewModel>>(plans);
+            return viewPlans;
         }
 
-        public async Task<PlanViewModel?> GetPlanByIdAsync(int id , CancellationToken ct)
+        public async Task<Result<PlanViewModel>> GetPlanByIdAsync(int id , CancellationToken ct)
         {
             var plan = await _unitOfWork.GetRepository<Plan>().GetByIdAsync(id , ct: ct);
             if ( plan == null )
-                return null;
+                return Result<PlanViewModel>.NotFound("Plan Not Found");
 
-            return new PlanViewModel
-            {
-                Name = plan.Name ,
-                Price = plan.Price ,
-                DurationDays = plan.DurationDays ,
-                Description = plan.Description ,
-                IsActive = plan.IsActive
-            };
+            var mappedPlan = _mapper.Map<Plan , PlanViewModel>(plan);
+            return Result<PlanViewModel>.Ok(mappedPlan);
         }
 
-        public async Task<UpdatePlanViewModel> GetPlanToUpdateAsync(int id , CancellationToken ct)
+        public async Task<Result<UpdatePlanViewModel>> GetPlanToUpdateAsync(int id , CancellationToken ct)
         {
             var plan = await _unitOfWork.GetRepository<Plan>().GetByIdAsync(id , ct);
             if ( plan == null || !plan.IsActive == true )
-                return null;
+                return Result<UpdatePlanViewModel>.NotFound("Plan Not Found");
 
             if ( await CheckHasAnyActivateMemberShip(id , ct) )  // Focus Here
-                return null;
+                return Result<UpdatePlanViewModel>.Fail("Can Not Update Plan That Has Active MemberShips");
 
-            var plantoUpdate = new UpdatePlanViewModel
-            {
-                PlanName = plan.Name ,
-                Price = plan.Price ,
-                Description = plan.Description ,
-                DurationDays = plan.DurationDays
-            };
+            var plantoUpdate = _mapper.Map<Plan , UpdatePlanViewModel>(plan);
 
-            return plantoUpdate;
+            return Result<UpdatePlanViewModel>.Ok(plantoUpdate);
         }
 
-        public async Task<bool> TogglePlanActivationAsync(int id , CancellationToken ct)
+        public async Task<Result> TogglePlanActivationAsync(int id , CancellationToken ct)
         {
             var plan = await _unitOfWork.GetRepository<Plan>().GetByIdAsync(id , ct);
             if ( plan == null )
-                return false;
+                return Result.NotFound("Plan not Found");
 
             plan.IsActive = !plan.IsActive;
             plan.UpdatedAt = DateTime.Now;
 
             _unitOfWork.GetRepository<Plan>().Update(plan);
             var result = await _unitOfWork.SaveChangeAsync(ct);
-            return result > 0;
+            return result > 0 ? Result.Ok() : Result.Fail("Failed To Activate Or Decativate This Plan");
         }
 
-        public async Task<bool> UpdatePlanAsync(int id , UpdatePlanViewModel model , CancellationToken ct)
+        public async Task<Result> UpdatePlanAsync(int id , UpdatePlanViewModel model , CancellationToken ct)
         {
             var plan = await _unitOfWork.GetRepository<Plan>().GetByIdAsync(id , ct);
             if ( plan == null )
-                return false;
+                return Result.NotFound("Plan not Found");
 
             if ( await CheckHasAnyActivateMemberShip(id , ct) )
-                return false;
+                return Result.Fail("Can Not Update Plan That Has Active MemberShips");
 
-            plan.Price = model.Price;
-            plan.Description = model.Description;
-            plan.DurationDays = model.DurationDays;
+            var plantoUpdate = _mapper.Map(model , plan);
             plan.UpdatedAt = DateTime.Now;
 
             _unitOfWork.GetRepository<Plan>().Update(plan);
             var result = await _unitOfWork.SaveChangeAsync(ct);
-            return result > 0;
+            return result > 0 ? Result.Ok() : Result.Fail("Failed To Update This Plan");
         }
 
         private async Task<bool> CheckHasAnyActivateMemberShip(int id , CancellationToken ct)  // Focus Here

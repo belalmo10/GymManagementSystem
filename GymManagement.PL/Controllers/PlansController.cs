@@ -1,9 +1,11 @@
 ﻿using GymManagement.BLL.Services.Interfaces;
 using GymManagement.BLL.Services.ViewModels.PlanViewModel;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GymManagementSystem.Controllers
 {
+    [Authorize]
     public class PlansController : Controller
     {
 
@@ -22,24 +24,26 @@ namespace GymManagementSystem.Controllers
         public async Task<IActionResult> Details(int id , CancellationToken ct = default)
         {
             var plan = await _planService.GetPlanByIdAsync(id , ct);
-            if ( plan == null )
+            if ( plan.success )
+                return View(plan.value);
+            else
             {
-                TempData["ErrorMessage"] = "Plan Not Found.";
+                TempData["ErrorMessage"] = plan.message;
                 return RedirectToAction(nameof(Index));
             }
-            return View(plan);
         }
 
         [HttpGet]
         public async Task<IActionResult> Edit(int id , CancellationToken ct = default)
         {
             var plan = await _planService.GetPlanToUpdateAsync(id , ct);
-            if ( plan == null )
+            if ( plan.success )
+                return View(plan.value);
+            else
             {
-                TempData["ErrorMessage"] = "Plan Can Not Be Edited Cause May (Not Found , Has Active MemberShip , InActive)";
+                TempData["ErrorMessage"] = plan.message;
                 return RedirectToAction(nameof(Index));
             }
-            return View(plan);
         }
 
         [HttpPost]
@@ -48,7 +52,7 @@ namespace GymManagementSystem.Controllers
             if ( !ModelState.IsValid )
                 return View(model);
             var plan = await _planService.UpdatePlanAsync(id , model , ct);
-            if ( plan )
+            if ( plan.success )
                 TempData["SuccessMessage"] = "Plan Updated Successfully";
             else
                 TempData["ErrorMessage"] = "Plan Failed To Update";
@@ -59,10 +63,10 @@ namespace GymManagementSystem.Controllers
         public async Task<IActionResult> Activate(int id , CancellationToken ct = default)
         {
             var plan = await _planService.TogglePlanActivationAsync(id , ct);
-            if ( plan )
+            if ( plan.success )
                 TempData["SuccessMessage"] = "Plan Status Changed";
             else
-                TempData["ErrorMessage"] = "Failed To Update Plan Status";
+                TempData["ErrorMessage"] = plan.message;
             return RedirectToAction(nameof(Index));
         }
     }

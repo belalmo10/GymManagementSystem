@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using GymManagement.BLL.Common;
+using GymManagement.BLL.Services.AttachmentService;
 using GymManagement.BLL.Services.Interfaces;
 using GymManagement.BLL.Services.ViewModels.MemberViewModel;
 using GymManagement.DAL.Data.Models;
@@ -10,24 +12,38 @@ namespace GymManagement.BLL.Services.Classes
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IAttachmentService _attachmentService;
 
-        public MemberService(IUnitOfWork unitOfWork , IMapper mapper)
+        public MemberService(IUnitOfWork unitOfWork , IMapper mapper , IAttachmentService attachmentService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _attachmentService = attachmentService;
         }
 
-        public async Task<bool> CreateMemberAsync(CreateMemberViewModel member , CancellationToken ct)
+        public async Task<Result> CreateMemberAsync(CreateMemberViewModel member , CancellationToken ct)
         {
             var emailExist = await _unitOfWork.GetRepository<Member>().AnyAsync(b => b.Email == member.Email);
             var phoneExist = await _unitOfWork.GetRepository<Member>().AnyAsync(b => b.Phone == member.Phone);
-            if ( emailExist || phoneExist ) return false;
+            if ( emailExist || phoneExist ) return Common.Result.Fail("Email Or Phone Already ");
+
+            var stordPhotoName = await _attachmentService.UploadAsync(member.PhotoFile.OpenReadStream() , member.PhotoFile.FileName , "MembersPhoto");
+
+            if ( string.IsNullOrWhiteSpace(stordPhotoName.value) ) return Common.Result.NotFound("PhotoName Not Found");
 
             var memberMapped = _mapper.Map<Member>(member);
-
+            memberMapped.Photo = stordPhotoName.value;
             _unitOfWork.GetRepository<Member>().Add(memberMapped);
             var Result = await _unitOfWork.SaveChangeAsync(ct);
-            return Result > 0;
+            if ( Result > 0 )
+            {
+                return Common.Result.Ok();
+            }
+            else
+            {
+                _attachmentService.Delete(member.PhotoFile.FileName , "MembersPhoto");
+                return Common.Result.Fail("Failed To Create Member");
+            }
         }
 
         public async Task<bool> DeleteMemberAsync(int id , CancellationToken ct)
